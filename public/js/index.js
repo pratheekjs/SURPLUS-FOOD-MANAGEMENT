@@ -4,7 +4,7 @@
 'use strict';
 
 // Call this function when the page loads (the "ready" event)
-$(document).ready(function() {
+$(document).ready(function () {
     initializePage();
 });
 
@@ -20,7 +20,7 @@ function signIn() {
     $(".btn-signin").on('click', function (e) {
         e.preventDefault();
 
-        if(validateEmail($("#input-email").val())) {
+        if (validateEmail($("#input-email").val())) {
             $(".form-signin").attr("action", "/login").submit();
         } else {
             alert("Please enter valid email.");
@@ -29,7 +29,7 @@ function signIn() {
 }
 
 function register() {
-    $("#btn-register").on('click', function(e) {
+    $("#btn-register").on('click', function (e) {
         e.preventDefault();
         $(".form-signin").attr("action", "/register").submit();
     });
@@ -39,7 +39,7 @@ function validateEmail(email) {
     return re.test(email);
 }
 
-function validatePassword(password,confirm) {
+function validatePassword(password, confirm) {
     var passcheck = password == confirm;
     return passcheck;
 }
@@ -49,3 +49,5 @@ function userPost() {
 
     }
 }
+
+module.exports = router;

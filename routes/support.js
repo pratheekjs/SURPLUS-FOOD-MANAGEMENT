@@ -6,6 +6,6 @@
  */
 var users = require('../users.json');
 
-exports.view = function(req, res){
-    res.render('support',users);
+exports.view = function (req, res) {
+    res.render('support', users);
 };

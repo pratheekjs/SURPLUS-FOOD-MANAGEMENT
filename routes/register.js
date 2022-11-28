@@ -1,7 +1,9 @@
-/**
- * Created by kenmiyachi on 11/10/16.
- */
+const express = require('express');
+const router = express.Router();
+const registerController = require('../controllers/registerController')
 
-exports.view = function(req, res){
+router.post('/', registerController.handleNewUser);
+
+exports.view = function (req, res) {
     res.render('register');
 };

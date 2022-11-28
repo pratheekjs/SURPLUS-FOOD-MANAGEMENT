@@ -1,5 +1,5 @@
 /* Module dependencies. */
-
+require('dotenv').config();
 var bodyParser = require('body-parser');
 var express = require('express');
 var cookieParser = require('cookie-parser');
@@ -9,7 +9,11 @@ var MongoClient = require('mongodb').MongoClient;
 var assert = require('assert');
 var path = require('path');
 var _ = require('lodash');
+const connectDB = require('./config/dbConn');
+const mongoose = require('mongoose');
 
+
+connectDB();
 // Route Functions
 var index = require('./routes/index');
 var register = require('./routes/register');
@@ -36,6 +40,8 @@ var offers = require('./data.json');
 
 // express variable
 var app = express();
+app.use(express.json());
+
 
 // all environments
 app.set('port', process.env.PORT || 3000);
@@ -46,6 +52,8 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cookieParser());
+app.use('/auth', require('./routes/auth'));
+
 
 //Re-routing to login st
 app.get('/', function (req, res) {
@@ -62,21 +70,21 @@ app.get('/support', support.view);
 app.get('/paymentinfo', paymentinfo.view);
 
 // Routes to see current state of database
-app.get('/users', function(req, res) {
+app.get('/users', function (req, res) {
     res.send(users);
 });
-app.get('/offers', function(req, res) {
+app.get('/offers', function (req, res) {
     res.send(offers);
 });
 
 // Add customer routes
-app.get('/customer/home', function(req, res){
+app.get('/customer/home', function (req, res) {
     res.render('customer/home', offers);
 });
 
-app.get('/customer/home2', function(req,res){
-  //data['showAlternate']	=	true;
-  res.render('customer/home2', offers);
+app.get('/customer/home2', function (req, res) {
+    //data['showAlternate']	=	true;
+    res.render('customer/home2', offers);
 });
 
 app.get('/customer/deal', deal.view);
@@ -86,13 +94,18 @@ app.get('/customer/map', map.view);
 //Add retailer routes
 app.get('/retailer/home', retailerHome.view);
 app.post('/retailer/home', createNewOffer);
-app.get('/retailer/options',retailerOptions.view);
+app.get('/retailer/options', retailerOptions.view);
 app.post('/retailer/options', addOptionsToOffer);
-app.get('/retailer/verification',retailerVerification.view);
+app.get('/retailer/verification', retailerVerification.view);
 app.get('/retailer/confirmation', retailerConfirmation.view);
 app.get('/retailer/info', retailerInfo.view);
 
-http.createServer(app).listen(app.get('port'), function(){
+
+mongoose.connection.once('open', () => {
+    console.log('Connected to MongoDB');
+})
+
+http.createServer(app).listen(app.get('port'), function () {
     console.log('Express server listening on port ' + app.get('port'));
 });
 
@@ -101,15 +114,15 @@ http.createServer(app).listen(app.get('port'), function(){
 function login(req, res) {
     var email = req.body.email;
     var passw = req.body.password;
-    var user = _.find(users.usersList, {'email': email, 'password': passw});
-    if(user && user.type === 'Customer') {
+    var user = _.find(users.usersList, { 'email': email, 'password': passw });
+    if (user && user.type === 'Customer') {
         res.cookie('username', user.username);
         res.redirect('/customer/home');
     }
-    else if(user && user.type === 'Retailer') {
+    else if (user && user.type === 'Retailer') {
         res.cookie('username', user.username);
         res.redirect('/retailer/home');
-    } else if(user)
+    } else if (user)
         //alert('ERROR. User is neither Customer nor Retailer!!!');
         console.log('ERROR. User is neither Customer nor Retailer');
     else
@@ -117,12 +130,12 @@ function login(req, res) {
 }
 
 function registerNewUser(req, res) {
-    if(checkUniqueness(req.body)) {
+    if (checkUniqueness(req.body)) {
         console.log('Username or email already exists. Try ' + req.body.username + '8');
         return;
     }
 
-    if(!checkNewUserRequest(req)) {
+    if (!checkNewUserRequest(req)) {
         //console.log(req.body);
         console.log('Please fill all required fields');
         return;
@@ -144,17 +157,17 @@ function registerNewUser(req, res) {
 }
 
 function checkUniqueness(body) {
-    return _.find(users.usersList, {'username': body.username}) ||
-        _.find(users.usersList, {'email': body.email})
+    return _.find(users.usersList, { 'username': body.username }) ||
+        _.find(users.usersList, { 'email': body.email })
 }
 
-function checkNewUserRequest(req){
-    if(req.body.radio && req.body.firstName &&
+function checkNewUserRequest(req) {
+    if (req.body.radio && req.body.firstName &&
         req.body.lastName && req.body.username &&
         req.body.email && req.body.password &&
         req.body.confirmPassword && req.body.checkbox === 'on') {
 
-        if(req.body.password === req.body.confirmPassword)
+        if (req.body.password === req.body.confirmPassword)
             return true;
 
     }
@@ -162,14 +175,14 @@ function checkNewUserRequest(req){
 }
 
 function createNewOffer(req, res) {
-    if(!checkNewOfferRequest(req)) {
+    if (!checkNewOfferRequest(req)) {
         console.log('Please fill all required fields');
         return;
     }
 
     var feature;
-    if(req.body.radio == 'YES') {
-        var offer = _.find(offers.offers, {'feature': true});
+    if (req.body.radio == 'YES') {
+        var offer = _.find(offers.offers, { 'feature': true });
         offer.feature = false;
         console.log(offer);
         feature = true;
@@ -195,28 +208,28 @@ function createNewOffer(req, res) {
 
 function addOptionsToOffer(req, res) {
     var id = parseInt(req.cookies.offerId);
-    var offer = _.find(offers.offers, {'id': id});
+    var offer = _.find(offers.offers, { 'id': id });
 
-    if(offer) {
-        if(req.body.radCharity) {
+    if (offer) {
+        if (req.body.radCharity) {
             offer.donationOrg = req.body.radCharity;
         } else {
             offer.donationOrg = null;
         }
 
-        if(req.body.radProfit) {
+        if (req.body.radProfit) {
             offer.profitOrg = req.body.radProfit;
         } else {
             offer.profitOrg = null;
         }
     }
 
-    if(offer.profitOrg)
+    if (offer.profitOrg)
         res.render('retailer/confirmation', offer);
 }
 
-function checkNewOfferRequest(req){
-    if(req.body.owner && req.body.name &&
+function checkNewOfferRequest(req) {
+    if (req.body.owner && req.body.name &&
         req.body.offer && req.body.price &&
         req.body.measure && req.body.quantity &&
         req.body.radio) {
@@ -224,45 +237,3 @@ function checkNewOfferRequest(req){
     }
     return false;
 }
-
-/*var url = 'mongodb://localhost:27017/myproject';
-
- var insertDocuments = function(db, callback) {
- // Get the documents collection
- var collection = db.collection('documents');
- // Insert some documents
- collection.insertMany([
- {a : 1}, {a : 2}, {a : 3}
- ], function(err, result) {
- assert.equal(err, null);
- assert.equal(3, result.result.n);
- assert.equal(3, result.ops.length);
- console.log("Inserted 3 documents into the collection");
- callback(result);
- });
- };
-
- var findDocuments = function(db, callback) {
- // Get the documents collection
- var collection = db.collection('documents');
- // Find some documents
- collection.find({}).toArray(function(err, docs) {
- assert.equal(err, null);
- console.log("Found the following records");
- console.log(docs);
- callback(docs);
- });
- };
-
- // Use connect method to connect to the server
- MongoClient.connect(url, function(err, db) {
- assert.equal(null, err);
- console.log("Connected successfully to server");
-
- insertDocuments(db, function() {
- findDocuments(db, function () {
- db.close();
- });
- });
- });*/
-
